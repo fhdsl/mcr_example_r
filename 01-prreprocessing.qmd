@@ -1,0 +1,101 @@
+---
+title: "Untitled"
+format: html
+---
+
+## Setup
+
+Remember, we started with a `SummarizedExperiment` object and now we have to transform it into an object that is usable with `DESeq2`. 
+
+```{r}
+#| warning: false
+#| message: false
+library(SummarizedExperiment)
+library(tidySummarizedExperiment)
+library(ggplot2)
+library(DESeq2)
+
+GSE96870 <- readRDS("data/GSE96870_se.rds")
+```
+
+
+## Plot
+
+```{r norm-library}
+#| echo: false
+library(patchwork)
+
+expression_plot <- 
+  GSE96870 |>
+    filter(.feature == "Asl") |>
+#    filter(time %in% c("Day0", "Day8")) |>
+    ggplot(aes(x = Label, y = counts, color = time)) +
+    geom_point() + theme_minimal() +
+    theme(axis.text.x = element_blank()) + 
+    ggtitle("Asl Expression count") 
+
+count_plot <- 
+  GSE96870 |>
+#    filter(time %in% c("Day0", "Day8")) |>
+    group_by(Label) |>
+    summarise(total_counts=sum(counts)) |>
+    mutate(time = colData(GSE96870)[["time"]]) |>
+    ggplot() +
+    aes(x=Label, y=total_counts, fill=time) +
+    geom_bar(stat="identity") + theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    ggtitle("Library Size for each Sample") 
+
+expression_plot/ count_plot 
+```
+
+## Normalizing
+
+```{r}
+GSE96870_filtered <- GSE96870[rowSums(assay(GSE96870, "counts")) > 5,]
+GSE96870_deseq <- DESeq2::DESeqDataSet(GSE96870_filtered, design = ~ sex + time)
+GSE96870_normalized <-  DESeq2::estimateSizeFactors(GSE96870_deseq)
+GSE96870_normalized |>
+  select(.feature, .sample, counts, sizeFactor)
+```
+
+```{r}
+expression_normalized <- GSE96870_normalized |>
+    filter(.feature == "Asl") |>
+    mutate(scaled = counts / sizeFactor) |>
+    ggplot(aes(x = Label, y = scaled, color = time)) +
+    geom_point() + theme_minimal() + 
+    theme(axis.text.x = element_blank()) + 
+    ggtitle("Asl Expression count \nnormalized by library size")
+
+(expression_plot + theme(legend.position = "none")) + expression_normalized
+```
+
+
+```{r}
+model_fit <- DESeq2::nbinomWaldTest(GSE96970_est)
+```
+
+```{r shrinkage}
+GSE_results <- DESeq2::results(model_fit, 
+                               contrast = c("time", "Day8", "Day0"), 
+                               lfcThreshold = 1,
+                               alpha = 0.05)
+summary(GSE_results)
+
+shrinkage <- lfcShrink(model_fit, coef="time_Day8_vs_Day0", lfcThreshold = 0.5)
+
+before <- GSE_results |>
+  ggplot() +
+  geom_histogram(aes(x=pvalue), fill="black", alpha=0.5, bins=40) +
+  xlab("original p-value") +
+  ylab("log2 Fold Change")
+
+after <- GSE_results |>
+  ggplot() +
+  geom_histogram(aes(x=padj), fill="blue", alpha=0.5, bins=40) +
+  xlab("adjusted p-value") +
+  ylab("log2 Fold Change")
+
+before / after
+```
