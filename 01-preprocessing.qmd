@@ -71,31 +71,3 @@ expression_normalized <- GSE96870_normalized |>
 (expression_plot + theme(legend.position = "none")) + expression_normalized
 ```
 
-
-```{r}
-model_fit <- DESeq2::nbinomWaldTest(GSE96970_est)
-```
-
-```{r shrinkage}
-GSE_results <- DESeq2::results(model_fit, 
-                               contrast = c("time", "Day8", "Day0"), 
-                               lfcThreshold = 1,
-                               alpha = 0.05)
-summary(GSE_results)
-
-shrinkage <- lfcShrink(model_fit, coef="time_Day8_vs_Day0", lfcThreshold = 0.5)
-
-before <- GSE_results |>
-  ggplot() +
-  geom_histogram(aes(x=pvalue), fill="black", alpha=0.5, bins=40) +
-  xlab("original p-value") +
-  ylab("log2 Fold Change")
-
-after <- GSE_results |>
-  ggplot() +
-  geom_histogram(aes(x=padj), fill="blue", alpha=0.5, bins=40) +
-  xlab("adjusted p-value") +
-  ylab("log2 Fold Change")
-
-before / after
-```
