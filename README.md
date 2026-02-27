@@ -13,6 +13,8 @@ This is a reproducible code example that uses R and Bioconductor. It requires R 
 
 ## How did I make this?
 
+There are instructions for R, Python, and Julia here: https://book.the-turing-way.org/communication/binder/zero-to-binder/
+
 1. Create a project in Positron using **File >> New Folder from Template**
 2. Run `renv::init()` to start the `renv` environment (isolating packages)
 3. Install packages, using `install.packages()` and `BiocManager::install()`

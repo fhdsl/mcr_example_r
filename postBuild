@@ -57,6 +57,9 @@ echo
 # install required python packages
 python3 -m pip install jupyterlab-quarto==0.1.45
 
+rv sync
+
 echo
 echo Completed
 echo
+
